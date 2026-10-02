@@ -1,0 +1,1558 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>40K Stat Calculator — Standalone v8</title>
+<style>
+*{box-sizing:border-box}
+:root{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#101014;color:#f5f5f7}
+body{margin:0;background:#101014;color:#f5f5f7}.app{max-width:1100px;margin:auto;padding:14px}
+.top{display:flex;justify-content:space-between;gap:12px;align-items:center}
+h1{font-size:25px;line-height:1.1;margin:0 0 3px}.sub{font-size:12px;color:#90909a}
+.card{background:#1a1a20;border:1px solid #2b2b34;border-radius:16px;padding:14px;margin:10px 0}
+.section{font-size:13px;font-weight:900;letter-spacing:.3px;margin-bottom:10px}
+.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+label,.label{display:block;font-size:11px;color:#a8a8b1;margin-bottom:5px}
+.ctrl{display:flex;gap:4px}
+input,select,button{font:inherit}input,select{width:100%;background:#25252d;color:#fff;border:1px solid #3a3a46;border-radius:10px;padding:9px;font-size:14px}
+input[type=checkbox]{width:18px;height:18px;accent-color:#7456e8}
+button{background:#292932;color:#fff;border:1px solid #3a3a46;border-radius:10px;padding:9px 11px;font-weight:800;cursor:pointer}
+button:hover{background:#393943}.primary{background:#7456e8;border-color:#7456e8}.danger{background:#52252a;border-color:#70343b}
+.step{width:38px;padding:0;font-size:18px}.chips{display:flex;gap:6px;flex-wrap:wrap}.chip.on{background:#7456e8;border-color:#7456e8}
+.check{display:flex;align-items:center;gap:8px;background:#25252d;border:1px solid #3a3a46;border-radius:11px;padding:9px;min-height:40px;font-size:12px}
+.note{font-size:10px;color:#8f8f99;line-height:1.4}.hidden{display:none!important}
+.weapon{background:#141419;border:1px solid #30303a;border-radius:14px;padding:12px;margin:9px 0}
+.weapon-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px}
+.weapon-name{font-size:14px;font-weight:900}.weapon-meta{font-size:10px;color:#999}
+.weapon-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:7px}
+.weapon-rules{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-top:8px}
+.result{background:linear-gradient(145deg,#241d37,#18181e);border-color:#503d7e}
+.kicker{font-size:11px;color:#aaa;font-weight:900;letter-spacing:.6px}.big{font-size:50px;font-weight:950;line-height:1;margin-top:2px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}.stat{background:#111116;border-radius:12px;padding:10px}.num{font-size:20px;font-weight:900}.small{font-size:11px;color:#999;line-height:1.3}
+.row{display:flex;justify-content:space-between;gap:20px;padding:7px 0;border-bottom:1px solid #2a2a33;font-size:12px}.row:last-child{border:0}
+.toolbar{display:flex;gap:7px;flex-wrap:wrap}.profile-card{background:#15151b;border:1px solid #30303a;border-radius:12px;padding:10px;margin:8px 0}
+.footer{text-align:center;color:#666;font-size:10px;margin:15px 0}
+@media(max-width:900px){.grid4,.weapon-rules{grid-template-columns:1fr 1fr}.weapon-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.grid3{grid-template-columns:1fr 1fr}.stats{grid-template-columns:1fr 1fr}}
+@media(max-width:520px){.app{padding:9px}.grid4,.grid3,.grid2,.target-grid{grid-template-columns:1fr 1fr}.weapon-grid{grid-template-columns:1fr 1fr}.weapon-rules{grid-template-columns:1fr 1fr}.big{font-size:43px}}
+
+/* ===== V10 FACTION THEMES ===== */
+:root{
+  --accent:#36a8ff;--accent2:#163e66;--panel:#101b25;--panel2:#0a1118;
+  --line:#31546e;--glow:rgba(54,168,255,.28);--title:#d7efff;
+}
+body[data-theme="imperium"]{--accent:#38b6ff;--accent2:#123e68;--panel:#0d1a25;--panel2:#081018;--line:#2e5874;--glow:rgba(56,182,255,.27);--title:#d9f2ff}
+body[data-theme="chaos"]{--accent:#e34242;--accent2:#651b1b;--panel:#251010;--panel2:#160909;--line:#713030;--glow:rgba(227,66,66,.27);--title:#ffd9d9}
+body[data-theme="xenos"]{--accent:#49c96d;--accent2:#175a31;--panel:#0d2116;--panel2:#07140d;--line:#2d6842;--glow:rgba(73,201,109,.25);--title:#d9ffe4}
+body{
+  background:
+    radial-gradient(circle at 50% -15%,var(--glow),transparent 38%),
+    repeating-linear-gradient(90deg,rgba(255,255,255,.012) 0 1px,transparent 1px 38px),
+    #06090c;
+}
+.app{max-width:1420px}
+.top{
+  border:1px solid var(--line);border-radius:14px;padding:12px 14px;
+  background:linear-gradient(180deg,var(--panel),var(--panel2));
+  box-shadow:0 0 26px var(--glow),inset 0 1px rgba(255,255,255,.05)
+}
+h1{color:var(--title);text-transform:uppercase;letter-spacing:.8px}
+.card,.weapon,.profile-card,.stat{
+  background:linear-gradient(180deg,var(--panel),var(--panel2));
+  border-color:var(--line)
+}
+.card{box-shadow:inset 0 1px rgba(255,255,255,.035),0 6px 20px rgba(0,0,0,.24)}
+.section{color:var(--title);text-transform:uppercase}
+button.primary,.chip.on{background:var(--accent2);border-color:var(--accent);box-shadow:0 0 12px var(--glow)}
+input:focus,select:focus{outline:1px solid var(--accent);border-color:var(--accent)}
+input[type=checkbox]{accent-color:var(--accent)}
+.result{background:linear-gradient(145deg,var(--accent2),var(--panel2));border-color:var(--accent)}
+.factionbar{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0}
+.factionbtn{min-width:120px;text-transform:uppercase;letter-spacing:.5px}
+.factionbtn.active{border-color:var(--accent);box-shadow:0 0 15px var(--glow);background:var(--accent2)}
+.weapon{position:relative;overflow:hidden}
+.weapon:before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent)}
+.weapon-grid-primary{display:grid;grid-template-columns:2fr repeat(5,minmax(74px,1fr));gap:7px}
+.modebtn{min-width:86px}
+.extra-badge{display:inline-block;margin-left:7px;padding:2px 7px;border:1px solid var(--accent);border-radius:999px;color:var(--title);font-size:9px}
+@media(max-width:900px){.weapon-grid-primary{grid-template-columns:1fr 1fr 1fr}}
+@media(max-width:560px){.weapon-grid-primary{grid-template-columns:1fr 1fr}}
+
+
+/* ===== V11 — FACTION VISUAL IDENTITIES ===== */
+body:before,body:after{content:"";position:fixed;pointer-events:none;z-index:-1}
+body:before{inset:0;opacity:.16}
+body:after{left:0;right:0;top:0;height:240px;opacity:.48}
+.top{position:relative;margin-top:20px;overflow:visible}
+.faction-emblem{font-size:44px;line-height:1;filter:drop-shadow(0 0 12px var(--glow))}
+.theme-description{font-size:9px;color:#96a2ac;letter-spacing:1.7px;margin-top:4px;font-weight:800}
+body[data-theme="imperium"]:before{background-image:linear-gradient(30deg,transparent 47%,rgba(198,225,255,.16) 48% 52%,transparent 53%),linear-gradient(150deg,transparent 47%,rgba(198,225,255,.08) 48% 52%,transparent 53%);background-size:78px 78px}
+body[data-theme="imperium"]:after{background:radial-gradient(ellipse at 50% 0,rgba(57,172,255,.5),transparent 60%),linear-gradient(90deg,transparent 0 18%,rgba(218,186,91,.10) 18% 19%,transparent 19% 81%,rgba(218,186,91,.10) 81% 82%,transparent)}
+body[data-theme="imperium"] .top{border-top:3px solid #d9bb62}
+body[data-theme="imperium"] .section:before{content:"◆ ";color:#d9bb62}
+body[data-theme="imperium"] .weapon:after{content:"I";position:absolute;right:12px;top:7px;color:rgba(218,187,98,.18);font:900 38px Georgia,serif}
+body[data-theme="chaos"]:before{background-image:repeating-conic-gradient(from 0deg,rgba(255,46,46,.12) 0 3deg,transparent 3deg 25deg);background-size:190px 190px}
+body[data-theme="chaos"]:after{background:radial-gradient(ellipse at 50% 0,rgba(215,28,28,.55),transparent 58%),repeating-linear-gradient(115deg,transparent 0 46px,rgba(255,50,50,.08) 47px 49px,transparent 50px 92px)}
+body[data-theme="chaos"] .card,body[data-theme="chaos"] .weapon{clip-path:polygon(0 8px,8px 0,calc(100% - 8px) 0,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0 calc(100% - 8px))}
+body[data-theme="chaos"] .section:before{content:"✦ ";color:#ff5555}
+body[data-theme="chaos"] .weapon:after{content:"✹";position:absolute;right:10px;top:5px;color:rgba(255,70,70,.18);font-size:36px}
+body[data-theme="xenos"]:before{background-image:radial-gradient(circle,rgba(87,255,143,.20) 1px,transparent 2px),linear-gradient(60deg,transparent 48%,rgba(87,255,143,.08) 49% 51%,transparent 52%);background-size:28px 28px,68px 68px}
+body[data-theme="xenos"]:after{background:radial-gradient(ellipse at 50% 0,rgba(42,224,105,.44),transparent 60%),linear-gradient(90deg,transparent,rgba(71,255,145,.10),transparent)}
+body[data-theme="xenos"] .card,body[data-theme="xenos"] .weapon{border-radius:24px 7px 24px 7px}
+body[data-theme="xenos"] input,body[data-theme="xenos"] select{border-radius:18px 6px 18px 6px}
+body[data-theme="xenos"] .section:before{content:"⬡ ";color:#69ef9d}
+body[data-theme="xenos"] .weapon:after{content:"⬡";position:absolute;right:10px;top:5px;color:rgba(91,255,147,.16);font-size:36px}
+
+
+/* ===== V12 — ORNAMENTATION DE FACTION ===== */
+.ornament-layer{position:fixed;inset:0;pointer-events:none;z-index:-1;overflow:hidden}
+.orn{position:absolute;user-select:none;opacity:.12;filter:drop-shadow(0 0 14px var(--glow))}
+.orn-a{left:2%;top:12%;font-size:88px}.orn-b{right:2%;top:17%;font-size:72px}.orn-c{left:4%;bottom:8%;font-size:70px}.orn-d{right:4%;bottom:7%;font-size:86px}
+.faction-banner{display:grid;grid-template-columns:80px 1fr 80px;align-items:center;gap:10px;margin:10px 0;padding:8px 14px;border:1px solid var(--line);background:linear-gradient(90deg,var(--panel2),var(--panel),var(--panel2));box-shadow:0 0 18px var(--glow);overflow:hidden}
+.banner-symbol{text-align:center;font-size:36px;opacity:.75}.banner-center{text-align:center;font-size:10px;letter-spacing:3px;font-weight:900;color:var(--title)}
+.card{position:relative;overflow:hidden}
+.card>.section{position:relative;z-index:1}
+.card:after{position:absolute;right:9px;bottom:-13px;font-size:64px;opacity:.035;pointer-events:none}
+
+/* IMPERIUM: marble/navy panels, gold trim, aquila/servo-skull language */
+body[data-theme="imperium"]{--gold:#d7b35d}
+body[data-theme="imperium"] .card{border-top-color:rgba(215,179,93,.68)}
+body[data-theme="imperium"] .card:after{content:"🦅";opacity:.045}
+body[data-theme="imperium"] .faction-banner{border-top:2px solid var(--gold);border-bottom:2px solid var(--gold);background:linear-gradient(90deg,#07111a,#112a3c 35%,#0a1824 65%,#07111a)}
+body[data-theme="imperium"] .faction-banner:before,body[data-theme="imperium"] .faction-banner:after{content:"⚙";font-size:30px;color:var(--gold);opacity:.65;text-align:center}
+body[data-theme="imperium"] .faction-banner .banner-symbol{display:none}
+body[data-theme="imperium"] .weapon{box-shadow:inset 0 0 0 1px rgba(215,179,93,.07),0 8px 22px rgba(0,0,0,.3)}
+body[data-theme="imperium"] .section{border-bottom:1px solid rgba(215,179,93,.22);padding-bottom:7px}
+body[data-theme="imperium"] .orn{color:#d8b45e}
+body[data-theme="imperium"] .orn-a:before{content:"🦅"}.orn-a:before{}
+body[data-theme="imperium"] .orn-b:before{content:"☠️";filter:grayscale(1)}
+body[data-theme="imperium"] .orn-c:before{content:"⚙️"}
+body[data-theme="imperium"] .orn-d:before{content:"🦅"}
+
+/* CHAOS: ritual star geometry + four-god sigil strip + daemonic shadows */
+body[data-theme="chaos"] .faction-banner{background:linear-gradient(90deg,#100506,#3a090c,#170507);border-color:#8e2424}
+body[data-theme="chaos"] .banner-center:after{content:"  ✹  ☣  ♀  ⚔  ◈";display:block;margin-top:5px;font-size:19px;letter-spacing:12px;color:#df5656;text-shadow:0 0 12px #b00000}
+body[data-theme="chaos"] .card:after{content:"✹";opacity:.06}
+body[data-theme="chaos"] .orn{color:#b91824;text-shadow:0 0 20px #9e0010}
+body[data-theme="chaos"] .orn-a:before{content:"✹"}.orn-a:before{}
+body[data-theme="chaos"] .orn-b:before{content:"☣"}
+body[data-theme="chaos"] .orn-c:before{content:"⚔"}
+body[data-theme="chaos"] .orn-d:before{content:"◈"}
+body[data-theme="chaos"] .weapon{background:linear-gradient(155deg,#260b0d,#110708 60%,#25070b)}
+body[data-theme="chaos"] .weapon:before{background:linear-gradient(#ff4040,#541015,#ff4040)}
+body[data-theme="chaos"] .app:after{content:"";position:fixed;left:10%;right:10%;bottom:-110px;height:260px;pointer-events:none;z-index:-1;background:radial-gradient(ellipse at 22% 80%,rgba(0,0,0,.9),transparent 32%),radial-gradient(ellipse at 52% 90%,rgba(0,0,0,.95),transparent 34%),radial-gradient(ellipse at 82% 78%,rgba(0,0,0,.9),transparent 30%);filter:blur(8px)}
+
+/* XENOS: chitin ribs, Necron circuitry, Eldar wraithbone arcs */
+body[data-theme="xenos"] .faction-banner{background:linear-gradient(90deg,#07120c,#0d2a1a,#101d18,#07120c);border-color:#4ad27a}
+body[data-theme="xenos"] .banner-center:after{content:"CHITINE  ◇  MATRICE NÉCRON  ◇  MOELLE SPECTRALE";display:block;margin-top:5px;font-size:8px;letter-spacing:2px;color:#7ee7a4}
+body[data-theme="xenos"] .card:after{content:"⬡";opacity:.05}
+body[data-theme="xenos"] .weapon{background:linear-gradient(145deg,#07180e,#10251a 45%,#071614);box-shadow:inset 12px 0 25px rgba(69,210,109,.035)}
+body[data-theme="xenos"] .weapon:before{width:5px;background:linear-gradient(#62ef96,#173e2a,#62ef96);border-radius:50%}
+body[data-theme="xenos"] .orn{color:#57dc86}
+body[data-theme="xenos"] .orn-a:before{content:"⬡"}
+body[data-theme="xenos"] .orn-b:before{content:"◈"}
+body[data-theme="xenos"] .orn-c:before{content:"⌬"}
+body[data-theme="xenos"] .orn-d:before{content:"◇"}
+body[data-theme="xenos"] .card{background-image:radial-gradient(ellipse at 110% 50%,rgba(221,255,221,.04),transparent 38%),linear-gradient(180deg,var(--panel),var(--panel2))}
+body[data-theme="xenos"] .section{border-bottom:1px solid rgba(91,239,147,.18);padding-bottom:7px}
+@media(max-width:650px){.faction-banner{grid-template-columns:42px 1fr 42px}.orn{font-size:48px!important}}
+
+
+/* ===== V13 — 13 AMBIANCES VISUELLES, 100% HORS LIGNE ===== */
+body{--font-ui:Inter,Arial,Helvetica,sans-serif;--art1:#8dbbd8;--art2:#d2aa52;--art3:#172938;font-family:var(--font-ui)}
+h1,.section,.weapon-name,.factionbtn{font-family:var(--font-display,Arial Black,Arial,sans-serif)}
+.factionbar{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:6px}
+.factionbtn{font-size:10px;min-width:0;padding:8px 5px}
+.factionbtn.active{transform:translateY(-1px)}
+.faction-banner{height:96px;position:relative;overflow:hidden}
+.faction-banner .banner-symbol{display:none!important}
+.faction-art{position:absolute;inset:0}
+.ornament-layer .art{position:absolute;top:105px;bottom:0;width:min(22vw,280px);opacity:.24}
+.art-left{left:0}.art-right{right:0;transform:scaleX(-1)}
+.faction-art,.art{background-repeat:no-repeat;background-position:center;background-size:cover}
+.card,.weapon{backdrop-filter:blur(2px)}
+/* Imperium: aquila wings, gold filigree, servo-skull silhouette */
+body[data-theme="imperium"]{--accent:#5db8ef;--accent2:#173b55;--panel:#0b1822;--panel2:#071018;--line:#46647a;--title:#f0e2b5;--art1:#d7b55f;--art2:#bcd8e8;--font-display:Georgia,"Times New Roman",serif}
+body[data-theme="imperium"] .faction-art{background:
+ radial-gradient(circle at 50% 53%,#d9d4c8 0 7%,transparent 7.5%),
+ radial-gradient(circle at 47% 51%,#071018 0 1.5%,transparent 1.8%),radial-gradient(circle at 53% 51%,#071018 0 1.5%,transparent 1.8%),
+ conic-gradient(from 225deg at 50% 60%,transparent 0 7%,var(--art1) 7% 10%,transparent 10% 90%,var(--art1) 90% 93%,transparent 93%),
+ linear-gradient(25deg,transparent 38%,rgba(215,181,95,.65) 39% 42%,transparent 43%) left/50% 100%,
+ linear-gradient(-25deg,transparent 38%,rgba(215,181,95,.65) 39% 42%,transparent 43%) right/50% 100%}
+body[data-theme="imperium"] .art{background:repeating-linear-gradient(135deg,transparent 0 24px,rgba(215,181,95,.16) 25px 27px,transparent 28px 52px)}
+/* Space Marine: armored plates + purity-seal geometry */
+body[data-theme="spacemarine"]{--accent:#4fa2e7;--accent2:#153e70;--panel:#0a1a2e;--panel2:#07111f;--line:#315f90;--title:#e6edf4;--font-display:"Arial Narrow",Impact,sans-serif}
+body[data-theme="spacemarine"] .faction-art{background:linear-gradient(120deg,transparent 0 18%,rgba(57,105,156,.8) 18% 34%,transparent 34% 66%,rgba(57,105,156,.8) 66% 82%,transparent 82%),radial-gradient(circle at 50% 48%,#d7c29a 0 8%,#7b1f23 8.5% 13%,transparent 13.5%)}
+body[data-theme="spacemarine"] .art{background:linear-gradient(135deg,transparent 45%,rgba(75,137,196,.18) 46% 54%,transparent 55%) 0 0/72px 72px}
+/* Chaos generic */
+body[data-theme="chaos"]{--accent:#dc3c49;--accent2:#5a1019;--panel:#21090d;--panel2:#100507;--line:#6d252c;--title:#ffd4d4;--font-display:Impact,"Arial Black",sans-serif}
+body[data-theme="chaos"] .faction-art,body[data-theme="khorne"] .faction-art{background:repeating-conic-gradient(from 0deg at 50% 50%,transparent 0 18deg,rgba(220,55,65,.8) 19deg 22deg,transparent 23deg 45deg),radial-gradient(circle,transparent 0 20%,rgba(20,0,0,.7) 21% 31%,transparent 32%)}
+body[data-theme="chaos"] .art{background:radial-gradient(ellipse at 50% 80%,#000 0 16%,transparent 38%) 0 0/130px 170px}
+/* Slaanesh */
+body[data-theme="slaanesh"]{--accent:#e183d8;--accent2:#59244f;--panel:#231022;--panel2:#100812;--line:#75416f;--title:#ffe6fb;--font-display:Georgia,serif}
+body[data-theme="slaanesh"] .faction-art{background:radial-gradient(ellipse at 50% 50%,transparent 0 18%,rgba(235,144,223,.65) 19% 22%,transparent 23%),conic-gradient(from 20deg at 50% 50%,transparent 0 20%,rgba(218,119,203,.6) 21% 24%,transparent 25% 48%,rgba(218,119,203,.6) 49% 52%,transparent 53%)}
+body[data-theme="slaanesh"] .art{background:repeating-radial-gradient(ellipse at 30% 50%,transparent 0 18px,rgba(225,131,216,.12) 19px 21px,transparent 22px 38px)}
+/* Tzeentch */
+body[data-theme="tzeentch"]{--accent:#55c7ff;--accent2:#273b85;--panel:#10183a;--panel2:#090d22;--line:#4d5ca4;--title:#e7dcff;--font-display:Georgia,serif}
+body[data-theme="tzeentch"] .faction-art{background:conic-gradient(from 0deg at 50% 50%,#38b6e6,transparent 12%,#8355cf 22%,transparent 35%,#38b6e6 48%,transparent 60%,#8355cf 72%,transparent 84%,#38b6e6),radial-gradient(circle,#0b0d24 0 18%,transparent 19%)}
+body[data-theme="tzeentch"] .art{background:radial-gradient(circle at 50% 50%,rgba(78,202,255,.13) 0 2px,transparent 3px) 0 0/25px 25px}
+/* Khorne */
+body[data-theme="khorne"]{--accent:#ef3d32;--accent2:#65120c;--panel:#260b08;--panel2:#110503;--line:#7b2a22;--title:#ffd4c9;--font-display:Impact,sans-serif}
+body[data-theme="khorne"] .art{background:linear-gradient(45deg,transparent 46%,rgba(238,61,50,.18) 47% 53%,transparent 54%) 0 0/60px 60px}
+/* Nurgle */
+body[data-theme="nurgle"]{--accent:#91ad4f;--accent2:#394c1e;--panel:#18200e;--panel2:#0c1107;--line:#536335;--title:#e4e0a8;--font-display:Georgia,serif}
+body[data-theme="nurgle"] .faction-art{background:radial-gradient(circle at 37% 50%,transparent 0 13%,rgba(143,170,75,.75) 14% 20%,transparent 21%),radial-gradient(circle at 63% 50%,transparent 0 13%,rgba(143,170,75,.75) 14% 20%,transparent 21%),radial-gradient(circle at 50% 64%,transparent 0 13%,rgba(143,170,75,.75) 14% 20%,transparent 21%)}
+body[data-theme="nurgle"] .art{background:radial-gradient(circle,rgba(140,160,65,.12) 0 5px,transparent 6px) 0 0/34px 34px}
+/* Ork */
+body[data-theme="ork"]{--accent:#75b84c;--accent2:#29491d;--panel:#172015;--panel2:#0b1009;--line:#52643d;--title:#f0e3bd;--font-display:Impact,"Arial Black",sans-serif}
+body[data-theme="ork"] .faction-art{background:repeating-linear-gradient(135deg,transparent 0 22px,rgba(115,183,75,.55) 23px 29px,transparent 30px 50px),linear-gradient(90deg,transparent 0 45%,#c7b276 46% 54%,transparent 55%)}
+body[data-theme="ork"] .art{background:linear-gradient(25deg,transparent 46%,rgba(130,130,90,.18) 47% 53%,transparent 54%) 0 0/45px 45px}
+/* Necron */
+body[data-theme="necron"]{--accent:#52ff9b;--accent2:#143c2b;--panel:#0d1713;--panel2:#070d0b;--line:#315b49;--title:#d9ffe9;--font-display:"Arial Narrow",Arial,sans-serif}
+body[data-theme="necron"] .faction-art{background:linear-gradient(60deg,transparent 44%,rgba(74,255,151,.8) 45% 48%,transparent 49%),linear-gradient(-60deg,transparent 44%,rgba(74,255,151,.8) 45% 48%,transparent 49%),radial-gradient(circle at 50% 50%,#4aff97 0 6%,transparent 7%)}
+body[data-theme="necron"] .art{background:linear-gradient(90deg,transparent 48%,rgba(74,255,151,.13) 49% 51%,transparent 52%),linear-gradient(0deg,transparent 48%,rgba(74,255,151,.13) 49% 51%,transparent 52%);background-size:46px 46px}
+/* Eldar */
+body[data-theme="eldar"]{--accent:#71d7e7;--accent2:#29475b;--panel:#101a20;--panel2:#081014;--line:#456b78;--title:#f4f0e3;--font-display:Georgia,serif}
+body[data-theme="eldar"] .faction-art{background:radial-gradient(ellipse at 50% 110%,transparent 0 48%,rgba(224,231,217,.75) 49% 53%,transparent 54%),radial-gradient(ellipse at 50% 100%,transparent 0 30%,rgba(99,205,222,.5) 31% 34%,transparent 35%)}
+body[data-theme="eldar"] .art{background:repeating-radial-gradient(ellipse at 100% 50%,transparent 0 30px,rgba(225,232,219,.11) 31px 34px,transparent 35px 60px)}
+/* Tau */
+body[data-theme="tau"]{--accent:#e38d4a;--accent2:#634023;--panel:#20201c;--panel2:#10100e;--line:#6e6658;--title:#f5efe2;--font-display:"Arial Narrow",Arial,sans-serif}
+body[data-theme="tau"] .faction-art{background:radial-gradient(circle at 50% 50%,transparent 0 17%,rgba(227,141,74,.8) 18% 24%,transparent 25%),linear-gradient(90deg,transparent 48%,rgba(227,141,74,.75) 49% 51%,transparent 52%)}
+body[data-theme="tau"] .art{background:linear-gradient(30deg,transparent 47%,rgba(227,141,74,.12) 48% 52%,transparent 53%) 0 0/70px 70px}
+/* Tyranid */
+body[data-theme="tyranid"]{--accent:#b66ee4;--accent2:#512d68;--panel:#201225;--panel2:#100912;--line:#654177;--title:#f2dfff;--font-display:Georgia,serif}
+body[data-theme="tyranid"] .faction-art{background:repeating-radial-gradient(ellipse at 50% 110%,transparent 0 12px,rgba(182,110,228,.6) 13px 20px,transparent 21px 35px)}
+body[data-theme="tyranid"] .art{background:repeating-linear-gradient(75deg,transparent 0 28px,rgba(182,110,228,.12) 29px 35px,transparent 36px 58px)}
+/* Votann */
+body[data-theme="votann"]{--accent:#e6a548;--accent2:#654521;--panel:#201b13;--panel2:#100d09;--line:#6c5b3c;--title:#fff0cf;--font-display:"Arial Black",Arial,sans-serif}
+body[data-theme="votann"] .faction-art{background:linear-gradient(60deg,transparent 38%,rgba(230,165,72,.7) 39% 45%,transparent 46%),linear-gradient(-60deg,transparent 38%,rgba(230,165,72,.7) 39% 45%,transparent 46%),linear-gradient(90deg,transparent 46%,rgba(230,165,72,.7) 47% 53%,transparent 54%)}
+body[data-theme="votann"] .art{background:linear-gradient(30deg,transparent 44%,rgba(230,165,72,.12) 45% 55%,transparent 56%) 0 0/54px 54px}
+
+
+/* ===== V14 — RETOUR À L'ERGONOMIE VISUELLE V9 ===== */
+.ornament-layer,.faction-banner{display:none!important}
+body:before,body:after,.app:after{display:none!important}
+body{
+  --accent:#b8963e;--accent2:#514019;--panel:#1a1a20;--panel2:#111116;
+  --line:#35353e;--glow:transparent;--title:#f5f5f7;
+  background:#101014!important;color:#f5f5f7;
+  font-family:system-ui,-apple-system,"Segoe UI",sans-serif!important
+}
+h1,.section,.weapon-name,.factionbtn{font-family:system-ui,-apple-system,"Segoe UI",sans-serif!important}
+.top{margin-top:0;border:1px solid var(--line)!important;border-radius:16px!important;background:#1a1a20!important;box-shadow:none!important}
+.card,.weapon,.profile-card,.stat{clip-path:none!important;border-radius:14px!important;background:#1a1a20!important;box-shadow:none!important}
+.weapon{background:#141419!important}
+.weapon:before{width:3px!important;background:var(--accent)!important;border-radius:0!important}
+.weapon:after,.card:after{display:none!important}
+.section{border:0!important;padding-bottom:0!important;color:var(--title)!important}
+.section:before{content:""!important}
+input,select{border-radius:10px!important}
+.factionbar{display:flex!important;gap:6px!important;flex-wrap:wrap!important;margin:10px 0!important}
+.factionbtn{min-width:auto!important;font-size:10px!important;padding:8px 10px!important;background:#24242c!important;border-color:#3b3b45!important}
+.factionbtn.active{background:var(--accent2)!important;border-color:var(--accent)!important;box-shadow:none!important;transform:none!important}
+button.primary,.chip.on{background:var(--accent2)!important;border-color:var(--accent)!important;box-shadow:none!important}
+input[type=checkbox]{accent-color:var(--accent)!important}
+.result{background:linear-gradient(145deg,var(--accent2),#18181e)!important;border-color:var(--accent)!important}
+
+/* Couleurs uniquement — aucune décoration de faction */
+body[data-theme="imperium"]{--accent:#d0a83d;--accent2:#5a4617;--title:#f3e4b2}
+body[data-theme="spacemarine"]{--accent:#315f9f;--accent2:#172d4d;--title:#dbe9ff}
+body[data-theme="chaosmarine"]{--accent:#666872;--accent2:#2b2c31;--title:#dedee2}
+body[data-theme="tzeentch"]{--accent:#2ec8c8;--accent2:#155454;--title:#d5ffff}
+body[data-theme="khorne"]{--accent:#b7823b;--accent2:#503519;--title:#f2dfbf}
+body[data-theme="nurgle"]{--accent:#778b4d;--accent2:#354126;--title:#e3e8cb}
+body[data-theme="slaanesh"]{--accent:#d978ae;--accent2:#5d2f4b;--title:#ffe1f1}
+body[data-theme="eldar"]{--accent:#d8cfb4;--accent2:#5a5547;--title:#fffaf0}
+body[data-theme="ork"]{--accent:#4e9a4d;--accent2:#254b25;--title:#dcf2d9}
+body[data-theme="necron"]{--accent:#9ba4a7;--accent2:#41484b;--title:#edf1f2}
+body[data-theme="admech"]{--accent:#8f2929;--accent2:#481818;--title:#f2d5d0}
+body[data-theme="tyranid"]{--accent:#8752b5;--accent2:#41265c;--title:#ebdcfa}
+body[data-theme="votann"]{--accent:#876747;--accent2:#463424;--title:#eadbc9}
+
+
+<style>
+.weapon-grid-primary{grid-template-columns:2fr repeat(6,minmax(74px,1fr))!important}
+@media(max-width:900px){.weapon-grid-primary{grid-template-columns:1fr 1fr 1fr!important}}
+@media(max-width:560px){.weapon-grid-primary{grid-template-columns:1fr 1fr!important}}
+
+/* ===== V18 — ligne Blast / Cleave ===== */
+.blast-cleave-row{grid-column:1/-1;display:grid;grid-template-columns:minmax(120px,.7fr) minmax(120px,.7fr) minmax(240px,1.6fr);gap:10px;align-items:end;padding:10px;margin-top:4px;border:1px solid var(--line);border-radius:12px;background:var(--panel2)}
+.blast-cleave-row>div{min-width:0}.blast-cleave-row label{display:block;min-height:18px}
+.blast-target-display{min-height:38px;display:flex;align-items:center;justify-content:center;padding:0 10px;border:1px solid var(--line);border-radius:10px;background:var(--panel);text-align:center}
+@media(max-width:700px){.blast-cleave-row{grid-template-columns:1fr 1fr}.blast-cleave-row>div:last-child{grid-column:1/-1}}
+
+
+/* ===== V19 — lisibilité des règles d'arme ===== */
+.compact-rule{min-height:38px;align-items:center}
+.critical-rules{min-width:0}
+.critical-chips{align-items:center;gap:6px;flex-wrap:wrap}
+.sustained-inline{display:flex;align-items:center;gap:5px;min-height:34px;padding:3px 7px;border:1px solid var(--line);border-radius:9px;background:var(--panel2)}
+.sustained-inline span{font-size:11px;font-weight:700;white-space:nowrap}
+.sustained-inline input{width:54px!important;min-width:54px!important;padding:6px!important;text-align:center}
+.blast-cleave-row{grid-template-columns:minmax(105px,.8fr) minmax(105px,.8fr) minmax(155px,.9fr)!important}
+.blast-target-display{min-height:34px!important;padding:0 6px!important;font-size:12px}
+@media(max-width:700px){
+ .blast-cleave-row{grid-template-columns:1fr 1fr!important}
+ .blast-cleave-row>div:last-child{grid-column:1/-1;max-width:230px;justify-self:center;width:100%}
+}
+
+
+/* ===== V20 — règles critiques uniformisées ===== */
+.critical-chips{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.sustained-rule{
+  display:flex;align-items:center;gap:7px;min-height:34px;
+  padding:5px 8px;border:1px solid var(--line);border-radius:9px;
+  background:var(--panel2);font-size:11px;font-weight:700;
+}
+.sustained-rule.on{background:var(--accent2)!important;border-color:var(--accent)!important}
+.sustained-rule span{white-space:nowrap}
+.sustained-rule input{
+  width:48px!important;min-width:48px!important;
+  padding:5px!important;text-align:center;
+}
+
+
+/* ===== V21 — typographie Touches soutenues ===== */
+.sustained-rule span{
+  font-family:inherit!important;
+  font-size:inherit!important;
+  font-weight:700!important;
+  line-height:1.1!important;
+  letter-spacing:normal!important;
+  white-space:nowrap;
+}
+.sustained-rule{
+  font-family:inherit!important;
+  font-size:inherit!important;
+  font-weight:700!important;
+}
+
+
+/* ===== V22 — Touches soutenues actives dès X >= 1 ===== */
+.sustained-rule.on{
+  background:var(--accent2)!important;
+  border-color:var(--accent)!important;
+  box-shadow:0 0 0 1px var(--accent) inset!important;
+}
+
+
+/* ===== V23 — alignement de la ligne principale du profil ===== */
+.weapon-grid-primary{
+  grid-template-columns:
+    minmax(135px,1.35fr)   /* Arme / nom : réduit */
+    minmax(190px,1.9fr)    /* Figurines attaquant : élargi */
+    minmax(92px,.9fr)
+    minmax(72px,.72fr)
+    minmax(62px,.62fr)
+    minmax(72px,.72fr)
+    minmax(72px,.72fr)!important;
+  align-items:end!important;
+}
+.weapon-grid-primary>div{min-width:0}
+.weapon-grid-primary label{
+  min-height:34px;
+  display:flex;
+  align-items:flex-end;
+  line-height:1.15;
+}
+@media(max-width:900px){
+  .weapon-grid-primary{grid-template-columns:1.2fr 1.6fr 1fr!important}
+  .weapon-grid-primary label{min-height:34px}
+}
+@media(max-width:560px){
+  .weapon-grid-primary{grid-template-columns:1fr 1fr!important}
+  .weapon-grid-primary label{min-height:auto}
+}
+
+
+/* ===== V24 — nouvelles ambiances ===== */
+body[data-theme="chaosmarine"]{--accent:#876747;--accent2:#463424;--title:#eadbc9}
+body[data-theme="khorne"]{--accent:#b5161b;--accent2:#570b0e;--title:#ffd8d8}
+body[data-theme="votann"]{--accent:#e1b928;--accent2:#66510b;--title:#fff1a8}
+body[data-theme="greyknights"]{--accent:#c5cbd0;--accent2:#555e66;--title:#f3f6f8}
+body[data-theme="knights"]{--accent:#df7d22;--accent2:#69360d;--title:#ffe0bc}
+
+
+/* ===== V26 — lisibilité de l'aide sur les seuils critiques ===== */
+.critical-threshold-note{
+  font-size:14px!important;
+  line-height:1.45!important;
+}
+.critical-threshold-note strong{
+  font-size:inherit!important;
+  font-weight:800!important;
+}
+
+
+/* ===== V27 — alignement seuils critiques sur Blast / Cleave ===== */
+.crit-hit-box,
+.crit-wound-box,
+.critical-note-box{
+  min-width:0;
+}
+
+/* Les deux sélecteurs occupent ensemble la largeur visuelle du bloc Cleave,
+   tandis que l'aide occupe la largeur du bloc Effectif Blast/Cleave. */
+.weapon-grid-rules{
+  align-items:start!important;
+}
+.crit-hit-box{grid-column:1!important}
+.crit-wound-box{grid-column:2!important}
+.critical-note-box{
+  grid-column:3 / -1!important;
+  width:100%!important;
+  max-width:none!important;
+}
+.critical-note-box .critical-threshold-note{
+  width:100%!important;
+  max-width:none!important;
+  box-sizing:border-box;
+}
+
+/* Légèrement plus compacts et décalés comme demandé. */
+.crit-hit-box select,
+.crit-wound-box select{
+  width:100%!important;
+  max-width:100%!important;
+}
+@media(min-width:901px){
+  .weapon-grid-rules{
+    grid-template-columns:minmax(105px,.8fr) minmax(105px,.8fr) minmax(155px,.9fr)!important;
+    column-gap:10px!important;
+  }
+}
+@media(max-width:900px){
+  .crit-hit-box,.crit-wound-box{grid-column:auto!important}
+  .critical-note-box{grid-column:1/-1!important}
+}
+
+
+/* ===== V28 — seuils critiques sur la ligne des Touches fatales ===== */
+@media(min-width:901px){
+  /* La ligne des règles critiques devient une ligne unique et lisible. */
+  .weapon-grid-secondary{
+    grid-template-columns:
+      minmax(250px,1.65fr)
+      minmax(135px,.8fr)
+      minmax(135px,.8fr)
+      minmax(300px,1.75fr)!important;
+    align-items:start!important;
+    gap:10px!important;
+  }
+
+  .weapon-grid-secondary .critical-rules{
+    grid-column:1!important;
+    grid-row:auto!important;
+  }
+  .weapon-grid-secondary .crit-hit-box{
+    grid-column:2!important;
+    grid-row:auto!important;
+  }
+  .weapon-grid-secondary .crit-wound-box{
+    grid-column:3!important;
+    grid-row:auto!important;
+  }
+  .weapon-grid-secondary .critical-note-box{
+    grid-column:4!important;
+    grid-row:auto!important;
+    width:100%!important;
+  }
+  .weapon-grid-secondary .critical-note-box .critical-threshold-note{
+    width:100%!important;
+    max-width:none!important;
+  }
+}
+
+
+/* ===== V28 final — une seule ligne pour toutes les options critiques ===== */
+@media(min-width:901px){
+ .critical-row-layout{
+   grid-template-columns:
+     minmax(270px,1.55fr)
+     minmax(130px,.75fr)
+     minmax(130px,.75fr)
+     minmax(330px,1.9fr)!important;
+   gap:10px!important;
+   align-items:start!important;
+ }
+ .critical-row-layout>div:first-child{grid-column:1/-1!important}
+ .critical-row-layout .critical-rules{grid-column:1!important}
+ .critical-row-layout .crit-hit-box{grid-column:2!important}
+ .critical-row-layout .crit-wound-box{grid-column:3!important}
+ .critical-row-layout .critical-note-box{grid-column:4!important;width:100%!important}
+ .critical-row-layout .critical-threshold-note{width:100%!important;max-width:none!important}
+}
+@media(max-width:900px){
+ .critical-row-layout .critical-rules,
+ .critical-row-layout .crit-hit-box,
+ .critical-row-layout .crit-wound-box,
+ .critical-row-layout .critical-note-box{grid-column:auto!important}
+ .critical-row-layout>div:first-child{grid-column:1/-1!important}
+}
+
+
+/* V29 palettes */
+body[data-theme="imperium"]{--accent:#d3a928;--accent2:#59460d;--title:#ffe8a0}
+body[data-theme="sororitas"]{--accent:#f4f1e9;--accent2:#706d68;--title:#ffffff}
+body[data-theme="astra"]{--accent:#876747;--accent2:#463424;--title:#eadbc9}
+body[data-theme="chaosmarine"]{--accent:#182a4a;--accent2:#0b1426;--title:#b8c9ea}
+body[data-theme="daemons"]{--accent:#555a60;--accent2:#25282c;--title:#d7dade}
+body[data-theme="slaanesh"]{--accent:#f3a7d7;--accent2:#74445f;--title:#ffe1f4}
+body[data-theme="eldar"]{--accent:#d8c6a1;--accent2:#66583f;--title:#fff1d2}
+body[data-theme="drukhari"]{--accent:#4b3b8f;--accent2:#241b50;--title:#d7d0ff}
+body[data-theme="nurgle"]{--accent:#8a8b4a;--accent2:#444522;--title:#e8e8b3}
+.factionbtn[data-theme-btn="imperium"]{--swatch:#d3a928}
+.factionbtn[data-theme-btn="sororitas"]{--swatch:#f4f1e9}
+.factionbtn[data-theme-btn="astra"]{--swatch:#876747}
+.factionbtn[data-theme-btn="spacemarine"]{--swatch:#234f88}
+.factionbtn[data-theme-btn="chaosmarine"]{--swatch:#182a4a}
+.factionbtn[data-theme-btn="daemons"]{--swatch:#555a60}
+.factionbtn[data-theme-btn="tzeentch"]{--swatch:#35b7b1}
+.factionbtn[data-theme-btn="khorne"]{--swatch:#b5161b}
+.factionbtn[data-theme-btn="nurgle"]{--swatch:#8a8b4a}
+.factionbtn[data-theme-btn="slaanesh"]{--swatch:#f3a7d7}
+.factionbtn[data-theme-btn="eldar"]{--swatch:#d8c6a1}
+.factionbtn[data-theme-btn="drukhari"]{--swatch:#4b3b8f}
+.factionbtn[data-theme-btn="ork"]{--swatch:#43823f}
+.factionbtn[data-theme-btn="necron"]{--swatch:#8c9996}
+.factionbtn[data-theme-btn="admech"]{--swatch:#7d2020}
+.factionbtn[data-theme-btn="tyranid"]{--swatch:#744d91}
+.factionbtn[data-theme-btn="greyknights"]{--swatch:#c5cbd0}
+.factionbtn[data-theme-btn="knights"]{--swatch:#df7d22}
+.factionbtn[data-theme-btn="votann"]{--swatch:#e1b928}
+.factionbtn{background:var(--swatch)!important;border-color:var(--swatch)!important;color:#fff!important;text-shadow:0 1px 2px rgba(0,0,0,.8)}
+.factionbtn[data-theme-btn="sororitas"],.factionbtn[data-theme-btn="greyknights"],.factionbtn[data-theme-btn="votann"],.factionbtn[data-theme-btn="eldar"]{color:#161616!important;text-shadow:none!important}
+.factionbtn.active{outline:2px solid #fff!important;outline-offset:2px;box-shadow:0 0 0 2px var(--swatch),0 0 12px rgba(255,255,255,.28)!important}
+
+
+/* ===== V30 — ordre chromatique et palettes finales ===== */
+body[data-theme="tau"]{--accent:#79553a;--accent2:#3d291c;--title:#ead5c2}
+body[data-theme="chaosknights"]{--accent:#8c9996;--accent2:#3d4745;--title:#dce4e2}
+body[data-theme="daemons"]{--accent:#555a60!important;--accent2:#25282c!important;--title:#d7dade!important}
+body[data-theme="necron"]{--accent:#39ff5a!important;--accent2:#123d1c!important;--title:#baffc5!important}
+body[data-theme="tzeentch"]{--accent:#63bff2!important;--accent2:#234f72!important;--title:#d8f1ff!important}
+
+.factionbtn[data-theme-btn="tau"]{--swatch:#79553a}
+.factionbtn[data-theme-btn="chaosknights"]{--swatch:#8c9996}
+.factionbtn[data-theme-btn="daemons"]{--swatch:#555a60}
+.factionbtn[data-theme-btn="necron"]{--swatch:#39ff5a}
+.factionbtn[data-theme-btn="tzeentch"]{--swatch:#63bff2}
+.factionbtn[data-theme-btn="necron"]{color:#101510!important;text-shadow:none!important}
+
+
+/* ===== V31 — Genestealer Cult et libellés de factions ===== */
+body[data-theme="genestealer"]{
+  --accent:#d9b8f4;
+  --accent2:#72588a;
+  --title:#f3e5ff;
+}
+.factionbtn[data-theme-btn="genestealer"]{
+  --swatch:#d9b8f4;
+  color:#17121d!important;
+  text-shadow:none!important;
+}
+
+
+/* ===== V32 — Imperium Agents et ajustements de factions ===== */
+body[data-theme="agents"]{
+  --accent:#111214;
+  --accent2:#050506;
+  --title:#e7e7e7;
+}
+.factionbtn[data-theme-btn="agents"]{
+  --swatch:#111214;
+  color:#ffffff!important;
+  text-shadow:none!important;
+}
+
+/* Ork plus sombre pour le distinguer clairement de Death Guard. */
+body[data-theme="ork"]{
+  --accent:#24562d!important;
+  --accent2:#102b16!important;
+  --title:#c9e7ce!important;
+}
+.factionbtn[data-theme-btn="ork"]{
+  --swatch:#24562d!important;
+}
+
+
+/* ===== V33 — palettes et ordre final ===== */
+/* Imperium Agents reprend le métal de Chaos Knight. */
+body[data-theme="agents"]{
+  --accent:#8c9996!important;
+  --accent2:#3d4745!important;
+  --title:#dce4e2!important;
+}
+.factionbtn[data-theme-btn="agents"]{
+  --swatch:#8c9996!important;
+  color:#101313!important;
+  text-shadow:none!important;
+}
+
+/* Chaos Knight devient noir et son bouton est placé en dernier. */
+body[data-theme="chaosknights"]{
+  --accent:#111214!important;
+  --accent2:#050506!important;
+  --title:#e7e7e7!important;
+}
+.factionbtn[data-theme-btn="chaosknights"]{
+  --swatch:#111214!important;
+  color:#ffffff!important;
+  text-shadow:none!important;
+}
+
+/* Arlequin : turquoise flashy. */
+body[data-theme="harlequin"]{
+  --accent:#16f0df!important;
+  --accent2:#08756d!important;
+  --title:#c9fffb!important;
+}
+.factionbtn[data-theme-btn="harlequin"]{
+  --swatch:#16f0df!important;
+  color:#071817!important;
+  text-shadow:none!important;
+}
+
+
+/* ===== V34 — Type d'attaque / Overwatch ===== */
+.attack-extra-note{
+  padding:0 0 9px 0!important;
+  width:100%;
+}
+.attack-type-row{
+  display:grid;
+  grid-template-columns:minmax(280px,560px) minmax(150px,220px);
+  gap:22px;
+  align-items:end;
+}
+.attack-type-select{min-width:0}
+.attack-overwatch{
+  min-height:48px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  margin:0;
+}
+@media(max-width:700px){
+  .attack-type-row{grid-template-columns:1fr;gap:8px}
+  .attack-overwatch{justify-content:flex-start}
+}
+
+
+/* ===== V35 — règles contextuelles Tir / Mêlée ===== */
+.blast-cleave-row{
+  grid-template-columns:minmax(150px,.8fr) minmax(220px,1.2fr)!important;
+}
+@media(max-width:700px){
+  .blast-cleave-row{grid-template-columns:1fr!important}
+  .blast-cleave-row>div:last-child{grid-column:auto!important;max-width:none!important;width:100%}
+}
+
+
+/* ===== V36 — inversion visuelle et positionnelle Critiques / Blast-Cleave ===== */
+.weapon-options-row{
+  grid-template-columns:repeat(4,minmax(150px,1fr))!important;
+}
+.critical-panel{
+  grid-template-columns:minmax(390px,1.55fr) minmax(150px,.75fr) minmax(150px,.75fr) minmax(390px,1.9fr)!important;
+  gap:10px!important;
+  align-items:end!important;
+  padding:10px!important;
+  margin-top:7px!important;
+  border:1px solid var(--line)!important;
+  border-radius:12px!important;
+  background:var(--panel2)!important;
+}
+.critical-panel>div:first-child{
+  grid-column:auto!important;
+}
+.critical-panel .critical-rules{grid-column:1!important}
+.critical-panel .crit-hit-box{grid-column:2!important}
+.critical-panel .crit-wound-box{grid-column:3!important}
+.critical-panel .critical-note-box{grid-column:4!important;width:100%!important}
+
+.blast-cleave-plain{
+  grid-template-columns:minmax(150px,.8fr) minmax(240px,1.2fr) minmax(280px,1.35fr) minmax(180px,.9fr)!important;
+  gap:10px!important;
+  align-items:end!important;
+  padding:0!important;
+  border:0!important;
+  background:transparent!important;
+}
+.blast-cleave-plain .blast-target-display{
+  min-height:38px!important;
+}
+@media(max-width:900px){
+  .weapon-options-row{grid-template-columns:1fr 1fr!important}
+  .critical-panel{
+    grid-template-columns:1fr 1fr!important;
+  }
+  .critical-panel .critical-rules,
+  .critical-panel .crit-hit-box,
+  .critical-panel .crit-wound-box,
+  .critical-panel .critical-note-box{grid-column:auto!important}
+  .critical-panel .critical-note-box{grid-column:1/-1!important}
+  .blast-cleave-plain{grid-template-columns:1fr 1fr!important}
+}
+@media(max-width:560px){
+  .weapon-options-row,
+  .critical-panel,
+  .blast-cleave-plain{grid-template-columns:1fr!important}
+  .critical-panel .critical-note-box{grid-column:auto!important}
+}
+
+
+/* ===== V37 — Torrent à côté de Précision en Tir ===== */
+.weapon-options-row{
+  grid-template-columns:repeat(5,minmax(135px,1fr))!important;
+}
+@media(max-width:1050px){
+  .weapon-options-row{grid-template-columns:repeat(3,minmax(145px,1fr))!important}
+}
+@media(max-width:700px){
+  .weapon-options-row{grid-template-columns:1fr 1fr!important}
+}
+@media(max-width:480px){
+  .weapon-options-row{grid-template-columns:1fr!important}
+}
+
+
+/* ===== V38 — Extra Attacks à côté de Torrent ===== */
+.weapon-options-row{
+  grid-template-columns:repeat(6,minmax(125px,1fr))!important;
+}
+@media(max-width:1180px){
+  .weapon-options-row{grid-template-columns:repeat(3,minmax(145px,1fr))!important}
+}
+@media(max-width:700px){
+  .weapon-options-row{grid-template-columns:1fr 1fr!important}
+}
+@media(max-width:480px){
+  .weapon-options-row{grid-template-columns:1fr!important}
+}
+
+
+/* ===== V40 — défenses avancées et alignement Overwatch ===== */
+.attack-overwatch{
+  height:50px!important;
+  min-height:50px!important;
+  box-sizing:border-box!important;
+  align-self:end!important;
+}
+.damage-zero-option{
+  flex-wrap:wrap;
+}
+.damage-zero-option>span:first-of-type{
+  flex:1 1 280px;
+}
+.damage-zero-value{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  margin-left:auto;
+  white-space:nowrap;
+  font-size:11px;
+  color:#a8a8b1;
+}
+.damage-zero-value input{
+  width:74px;
+  padding:7px 8px;
+}
+
+</style>
+</head>
+<body data-theme="imperium">
+<div class="ornament-layer" aria-hidden="true"><div class="art art-left"></div><div class="art art-right"></div></div>
+<div class="app">
+
+<div class="top">
+  <div><h1>⚔️ 40K Stat Calculator</h1><div class="sub">v40 • profils d’armes multiples • personnage • Blast/Cleave corrigés</div></div>
+  <button onclick="resetAll()">↺ Réinitialiser</button>
+</div>
+<div class="factionbar" id="themeBar">
+  <button class="factionbtn" data-theme-btn="sororitas" onclick="setTheme('sororitas')">Adepta Sororitas</button>
+  <button class="factionbtn" data-theme-btn="eldar" onclick="setTheme('eldar')">Aeldari</button>
+  <button class="factionbtn" data-theme-btn="votann" onclick="setTheme('votann')">Leagues of Votann</button>
+  <button class="factionbtn" data-theme-btn="imperium" onclick="setTheme('imperium')">Adeptus Custodes</button>
+  <button class="factionbtn" data-theme-btn="knights" onclick="setTheme('knights')">Imperial Knight</button>
+  <button class="factionbtn" data-theme-btn="admech" onclick="setTheme('admech')">Adeptus Mechanicus</button>
+  <button class="factionbtn" data-theme-btn="khorne" onclick="setTheme('khorne')">World Eater</button>
+  <button class="factionbtn" data-theme-btn="slaanesh" onclick="setTheme('slaanesh')">Emperor's Children</button>
+  <button class="factionbtn" data-theme-btn="astra" onclick="setTheme('astra')">Astra Militarum</button>
+  <button class="factionbtn" data-theme-btn="tau" onclick="setTheme('tau')">Empire T'Au</button>
+  <button class="factionbtn" data-theme-btn="nurgle" onclick="setTheme('nurgle')">Death Guard</button>
+  <button class="factionbtn" data-theme-btn="ork" onclick="setTheme('ork')">Ork</button>
+  <button class="factionbtn" data-theme-btn="necron" onclick="setTheme('necron')">Nécron</button>
+  <button class="factionbtn" data-theme-btn="tzeentch" onclick="setTheme('tzeentch')">Thousand Sons</button>
+  <button class="factionbtn" data-theme-btn="harlequin" onclick="setTheme('harlequin')">Arlequin</button>
+  <button class="factionbtn" data-theme-btn="spacemarine" onclick="setTheme('spacemarine')">Space Marine</button>
+  <button class="factionbtn" data-theme-btn="chaosmarine" onclick="setTheme('chaosmarine')">Space Marine du Chaos</button>
+  <button class="factionbtn" data-theme-btn="drukhari" onclick="setTheme('drukhari')">Drukhari</button>
+  <button class="factionbtn" data-theme-btn="genestealer" onclick="setTheme('genestealer')">Genestealer Cult</button>
+  <button class="factionbtn" data-theme-btn="tyranid" onclick="setTheme('tyranid')">Tyranide</button>
+  <button class="factionbtn" data-theme-btn="daemons" onclick="setTheme('daemons')">Démon</button>
+  <button class="factionbtn" data-theme-btn="agents" onclick="setTheme('agents')">Imperium Agents</button>
+  <button class="factionbtn" data-theme-btn="greyknights" onclick="setTheme('greyknights')">Grey Knight</button>
+  <button class="factionbtn" data-theme-btn="chaosknights" onclick="setTheme('chaosknights')">Chaos Knight</button>
+</div>
+<div class="faction-banner" aria-hidden="true">
+  <div class="banner-symbol">◆</div>
+  <div id="factionBannerArt" class="banner-center faction-art" aria-hidden="true"></div>
+  <div class="banner-symbol">◆</div>
+</div>
+
+<!-- ATTACKER WEAPONS -->
+<div class="card">
+  <div class="section">1 — UNITÉ ATTAQUANTE : PROFILS D’ARMES</div>
+  <div class="note" style="margin-bottom:9px">
+    Ajoute autant de profils que nécessaire : escouade, véhicule, monstre, personnage, armes différentes, etc.
+    Les attaques de chaque profil sont cumulées. Chaque profil conserve ses propres règles, notamment Cleave X, Blast X, Torrent, Précision, Lethal et Sustained.
+  </div>
+
+  <div class="attack-type-zone" style="margin-bottom:10px">
+    <div class="note attack-extra-note">En mêlée, un profil de personnage marqué <b>Extra Attacks</b> est ajouté aux autres profils utilisés.</div>
+    <div class="attack-type-row">
+      <div class="attack-type-select"><label>Type d'attaque</label><select id="attackPhase" onchange="onAttackPhaseChange()"><option value="ranged">Tir</option><option value="melee">Mêlée</option></select></div>
+      <label class="check attack-overwatch" id="overwatchOption"><input id="globalOverwatch" type="checkbox" onchange="calculate()"> 🔥 Overwatch</label>
+    </div>
+  </div>
+  <div class="toolbar">
+    <button class="primary" onclick="addWeapon('unit')">＋ Ajouter une arme</button>
+    <button class="primary" onclick="addWeapon('character')">＋ Ajouter une arme d’un personnage Leader ou Support</button>
+    <button class="primary" onclick="addExtraAttackWeapon()">＋ Extra Attacks du personnage</button>
+  </div>
+
+  <div id="unitWeapons"></div>
+  <div id="characterWeapons"></div>
+</div>
+
+<!-- WOUND -->
+<div class="card">
+  <div class="section">2 — CIBLE : ENDURANCE ET DÉFENSE</div>
+  <div class="grid4">
+    <div><label>Endurance principale</label><div class="ctrl"><button class="step" onclick="step('tough',-1)">−</button><input id="tough" type="number" min="1" value="4" oninput="calculate()"><button class="step" onclick="step('tough',1)">+</button></div></div>
+    <div><label>Sauvegarde</label><select id="save" onchange="calculate()"><option>2</option><option>3</option><option selected>4</option><option>5</option><option>6</option></select></div>
+    <div><label>Invulnérable</label><select id="inv" onchange="calculate()"><option value="0">—</option><option>2</option><option>3</option><option selected>4</option><option>5</option><option>6</option></select></div>
+    <div><label>Feel No Pain</label><select id="fnp" onchange="calculate()"><option value="0">—</option><option>2</option><option>3</option><option>4</option><option selected>5</option><option>6</option></select></div>
+  </div>
+
+  <div class="grid4" style="margin-top:10px">
+    <label class="check"><input id="targetMinusHit" type="checkbox" onchange="calculate()"> 🛡️ −1 à la touche contre cette cible</label>
+    <label class="check" id="coverOption"><input id="targetCover" type="checkbox" onchange="calculate()"> 🛡️ Couvert <span class="note">(−1 à la Capacité de Tir)</span></label>
+    <label class="check"><input id="minusWound" type="checkbox" onchange="calculate()"> 🛡️ −1 à la blessure contre cette cible</label>
+    <label class="check"><input id="minusDamage" type="checkbox" onchange="calculate()"> −1 aux dégâts <span class="note">(min. 1)</span></label>
+    <label class="check"><input id="phaseDamageOne" type="checkbox" onchange="calculate()"> 🛡️ Aptitudes réduisant les dégâts à 1 pour une phase</label>
+    <label class="check damage-zero-option"><input id="zeroOneAttack" type="checkbox" onchange="calculate()"> <span>🛡️ Aptitudes réduisant une sauvegarde ratée à 0 dégât</span><span class="damage-zero-value"><span>Dégâts annulés</span><input id="zeroAttackDamage" type="number" min="1" max="99" value="1" oninput="calculate()"></span></label>
+  </div>
+  <div class="note" style="margin-top:8px"><b>Couvert :</b> disponible uniquement en Tir. Il représente ici −1 à la Capacité de Tir et peut se cumuler avec « −1 à la touche » pour produire l’équivalent d’un décalage total de −2 sur le jet requis. <b>Réduction à 0 dégât :</b> indique la caractéristique de Dégâts de l’attaque dont une sauvegarde ratée doit être annulée une fois. <b>Dégâts à 1 :</b> ramène la caractéristique de Dégâts de toutes les armes à 1 pendant la phase.</div>
+</div>
+
+<!-- TARGET -->
+<div class="card">
+  <div class="section">3 — TYPE DE CIBLE</div>
+  <div class="chips">
+    <button id="targetSingle" class="chip on" onclick="setTarget('single')">👹 Figurine seule</button>
+    <button id="targetOneW" class="chip" onclick="setTarget('oneW')">👥 Unité • 1 PV</button>
+    <button id="targetMultiW" class="chip" onclick="setTarget('multiW')">👥 Unité • plusieurs PV</button>
+    <button id="targetAttached" class="chip" onclick="setTarget('attached')">🎖️ Unité + Personnage</button>
+  </div>
+
+  <div id="singleFields" class="target-grid" style="margin-top:10px">
+    <div><label>PV de la figurine</label><input id="singleHP" type="number" min="1" value="10" oninput="calculate()"></div>
+  </div>
+
+  <div id="oneWFields" class="target-grid hidden" style="margin-top:10px">
+    <div><label>Nombre de figurines</label><input id="oneWCount" type="number" min="1" value="10" oninput="calculate()"></div>
+  </div>
+
+  <div id="multiWFields" class="target-grid hidden" style="margin-top:10px">
+    <div><label>PV par figurine</label><input id="multiWHP" type="number" min="2" value="2" oninput="calculate()"></div>
+    <div><label>Nombre de figurines</label><input id="multiWCount" type="number" min="1" value="5" oninput="calculate()"></div>
+  </div>
+
+  <div id="attachedFields" class="hidden" style="margin-top:10px">
+    <div class="profile-card">
+      <div class="section">GARDE DU CORPS</div>
+      <div class="target-grid">
+        <div><label>Nombre de gardes</label><input id="bodyCount" type="number" min="1" value="4" oninput="calculate()"></div>
+        <div><label>PV par garde</label><input id="bodyHP" type="number" min="1" value="2" oninput="calculate()"></div>
+      </div>
+    </div>
+    <div class="profile-card">
+      <div class="section">🎯 PRÉCISION — PERSONNAGE</div>
+      <label class="check"><input id="precision" type="checkbox" onchange="calculate()"> Calculer les attaques avec Précision contre le personnage</label>
+      <div class="target-grid" style="margin-top:9px">
+        <div><label>PV personnage</label><input id="charHP" type="number" min="1" value="5" oninput="calculate()"></div>
+        <div><label>Sauvegarde personnage</label><select id="charSave" onchange="calculate()"><option>2</option><option selected>3</option><option>4</option><option>5</option><option>6</option></select></div>
+        <div><label>Invulnérable personnage</label><select id="charInv" onchange="calculate()"><option value="0">—</option><option>2</option><option selected>3</option><option>4</option><option>5</option><option>6</option></select></div>
+        <div><label>FNP personnage</label><select id="charFnp" onchange="calculate()"><option value="0">—</option><option>2</option><option>3</option><option>4</option><option selected>5</option><option>6</option></select></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="result" class="card result"></div>
+<details class="card" open><summary style="cursor:pointer;font-weight:900">📊 Détails</summary><div id="details"></div></details>
+
+<div class="card">
+  <div class="section">PROFILS SAUVEGARDÉS</div>
+  <div class="toolbar">
+    <button class="primary" onclick="saveProfile()">💾 Enregistrer</button>
+    <select id="profiles" style="max-width:310px"></select>
+    <button onclick="loadProfile()">Charger</button><button onclick="deleteProfile()">Supprimer</button>
+  </div>
+</div>
+<div class="footer">40K Stat Calculator v40 • un seul fichier HTML • aucun compte • aucune connexion requise</div>
+</div>
+
+<script>
+'use strict';
+
+let weapons=[];
+let nextWeaponId=1;
+let target='single';
+
+function uid(){return 'w'+(nextWeaponId++);}
+function $(id){return document.getElementById(id);}
+function num(id){const v=Number($(id).value);return Number.isFinite(v)?v:0;}
+function step(id,delta){
+  const el=$(id); if(!el)return;
+  let v=Number(el.value); if(!Number.isFinite(v))v=0;
+  const min=el.min!==''?Number(el.min):-Infinity;
+  const max=el.max!==''?Number(el.max):Infinity;
+  el.value=Math.max(min,Math.min(max,v+delta));
+  el.dispatchEvent(new Event('input',{bubbles:true}));
+}
+function whole(id){return Math.max(0,Math.floor(num(id)));}
+
+function defaultWeapon(kind){
+  return {
+    id:uid(), kind,
+    name:kind==='character'?'Arme du personnage':'Arme',
+    weaponCount:1,
+    attacks:kind==='character'?2:10,
+    strength:4, ap:0, damage:1, hit:3,
+    hitRR:'none', woundRR:'none',
+    minusHit:false, minusWound:false,
+    sustained:0, lethal:false, devastating:false,
+    critHit:6, critWound:6,
+    plusOneWound:false,
+    torrent:false,
+    cleave:0, blast:0, blastTargetModels:0
+  };
+}
+
+function setTheme(theme){
+  const themes=['sororitas','eldar','votann','imperium','knights','admech','khorne','slaanesh','astra','tau','nurgle','ork','necron','tzeentch','harlequin','spacemarine','chaosmarine','drukhari','genestealer','tyranid','daemons','agents','greyknights','chaosknights'];
+  if(!themes.includes(theme))theme='imperium';
+  document.body.dataset.theme=theme;
+  document.querySelectorAll('[data-theme-btn]').forEach(el=>el.classList.toggle('active',el.dataset.themeBtn===theme));
+  try{localStorage.setItem('40kThemeV14',theme)}catch(e){}
+}
+
+function addExtraAttackWeapon(){
+  const w=defaultWeapon('character');
+  w.name='Arme Extra Attacks';
+  w.extraAttacks=true;
+  weapons.push(w);
+  $('attackPhase').value='melee';
+  renderWeapons();calculate();
+}
+
+function addWeapon(kind){
+  weapons.push(defaultWeapon(kind));
+  renderWeapons();
+  calculate();
+}
+
+function removeWeapon(id){
+  weapons=weapons.filter(w=>w.id!==id);
+  renderWeapons();calculate();
+}
+
+function copyWeapon(id){
+  const src=weapons.find(w=>w.id===id);
+  if(!src)return;
+  const copy=JSON.parse(JSON.stringify(src));
+  copy.id=uid();copy.name=copy.name+' copie';
+  weapons.push(copy);renderWeapons();calculate();
+}
+
+function setWeapon(id,key,val){
+  const w=weapons.find(x=>x.id===id);if(!w)return;
+  if(['weaponCount','attacks','strength','ap','damage','hit','sustained','critHit','critWound','cleave','blast','blastTargetModels'].includes(key))val=Math.max(0,Math.floor(Number(val)||0));
+  w[key]=val;calculate();
+}
+
+function setWeaponBool(id,key,checked){
+  const w=weapons.find(x=>x.id===id);if(!w)return;
+  w[key]=checked;
+  renderWeapons();
+  calculate();
+}
+
+function setWeaponSustained(id,val,input){
+  const w=weapons.find(x=>x.id===id);if(!w)return;
+  const n=Math.max(0,Math.floor(Number(val)||0));
+  w.sustained=n;
+  if(input){
+    input.value=n;
+    const box=input.closest('.sustained-rule');
+    if(box)box.classList.toggle('on',n>=1);
+  }
+  calculate();
+}
+
+function setWeaponSelect(id,key,val){
+  const w=weapons.find(x=>x.id===id);if(!w)return;w[key]=val;calculate();
+}
+
+
+function onAttackPhaseChange(){
+  const phase=$('attackPhase').value;
+  const ow=$('globalOverwatch');
+  const owWrap=$('overwatchOption');
+  const cover=$('targetCover');
+  const coverWrap=$('coverOption');
+  const ranged=phase==='ranged';
+
+  if(owWrap)owWrap.style.display=ranged?'flex':'none';
+  if(coverWrap)coverWrap.style.display=ranged?'flex':'none';
+  if(!ranged && ow)ow.checked=false;
+  if(!ranged && cover)cover.checked=false;
+
+  /* Les règles incompatibles avec le type d'attaque sont neutralisées. */
+  weapons.forEach(w=>{
+    if(ranged){
+      w.cleave=0;
+    }else{
+      w.blast=0;
+      w.torrent=false;
+    }
+  });
+
+  renderWeapons();
+  calculate();
+}
+
+function renderWeapons(){
+  const unit=weapons.filter(w=>w.kind==='unit');
+  const chars=weapons.filter(w=>w.kind==='character');
+  $('unitWeapons').innerHTML=unit.length
+    ? unit.map(renderWeapon).join('')
+    : '<div class="note" style="padding:10px">Aucune arme ajoutée à l’unité. Clique sur « Ajouter une arme ».</div>';
+  $('characterWeapons').innerHTML=chars.length
+    ? '<div class="section" style="margin-top:16px">🎖️ ARMES DU PERSONNAGE</div>'+chars.map(renderWeapon).join('')
+    : '';
+}
+
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+function renderWeapon(w){
+  return `<div class="weapon">
+    <div class="weapon-head">
+      <div><div class="weapon-name">${esc(w.name)}</div><div class="weapon-meta">${w.kind==='character'?'Personnage':'Unité'}</div></div>
+      <div class="toolbar">
+        <button onclick="copyWeapon('${w.id}')">⧉</button>
+        <button class="danger" onclick="removeWeapon('${w.id}')">✕</button>
+      </div>
+    </div>
+
+    <div class="weapon-grid-primary">
+      <div><label>Nom ${w.extraAttacks?'<span class="extra-badge">EXTRA ATTACKS</span>':''}</label><input value="${esc(w.name)}" onchange="setWeapon('${w.id}','name',this.value)"></div>
+      <div><label>Nombre de figurines attaquant avec l’arme</label><input type="number" min="1" value="${w.weaponCount||1}" oninput="setWeapon('${w.id}','weaponCount',this.value)"></div>
+      <div><label>Attaques totales</label><input type="number" min="0" value="${w.attacks}" oninput="setWeapon('${w.id}','attacks',this.value)"></div>
+      <div><label>Force</label><input type="number" min="1" value="${w.strength}" oninput="setWeapon('${w.id}','strength',this.value)"></div>
+      <div><label>PA</label><input type="number" min="0" value="${w.ap}" oninput="setWeapon('${w.id}','ap',this.value)"></div>
+      <div><label>Dégâts</label><input type="number" min="1" value="${w.damage}" oninput="setWeapon('${w.id}','damage',this.value)"></div>
+      <div><label>Touche</label><select onchange="setWeaponSelect('${w.id}','hit',Number(this.value))">${[2,3,4,5,6].map(x=>`<option ${Number(w.hit)===x?'selected':''}>${x}+</option>`).join('')}</select></div>
+    </div>
+
+    <div class="weapon-grid weapon-options-row" style="margin-top:8px">
+      <div><label>Relance touche</label><select onchange="setWeaponSelect('${w.id}','hitRR',this.value)">${rrOptions(w.hitRR)}</select></div>
+      <div><label>Relance blessure</label><select onchange="setWeaponSelect('${w.id}','woundRR',this.value)">${rrOptions(w.woundRR)}</select></div>
+      <div><label>+1 pour blesser</label><div class="chips compact-rule"><button class="chip ${w.plusOneWound?'on':''}" onclick="setWeaponBool('${w.id}','plusOneWound',${!w.plusOneWound})">+1 Blessure</button></div></div>
+      <div><label>Précision</label><div class="chips compact-rule"><button class="chip modebtn ${w.precision?'on':''}" onclick="setWeaponBool('${w.id}','precision',${!w.precision})">Précision</button></div></div>
+      ${$('attackPhase').value==='ranged'?`<div><label>Torrent</label><div class="chips compact-rule"><button class="chip modebtn ${w.torrent?'on':''}" onclick="setWeaponBool('${w.id}','torrent',${!w.torrent})">Torrent</button></div></div>`:''}
+      ${w.kind==='character'?`<div><label>Extra Attacks</label><div class="chips compact-rule"><button class="chip modebtn ${w.extraAttacks?'on':''}" onclick="setWeaponBool('${w.id}','extraAttacks',${!w.extraAttacks})">Extra Attacks</button></div></div>`:''}
+    </div>
+
+    <div class="weapon-grid critical-row-layout critical-panel" style="margin-top:7px">
+      <div class="critical-rules"><label>Critiques / règles</label><div class="chips critical-chips">
+        <button class="chip ${w.lethal?'on':''}" onclick="setWeaponBool('${w.id}','lethal',${!w.lethal})">Touches fatales</button>
+        <button class="chip ${w.devastating?'on':''}" onclick="setWeaponBool('${w.id}','devastating',${!w.devastating})">Blessures dévastatrices</button>
+        <div class="sustained-rule ${Number(w.sustained)>0?'on':''}">
+          <span>Touches soutenues</span>
+          <input type="number" min="0" max="20" value="${w.sustained}" oninput="setWeaponSustained('${w.id}',this.value,this)">
+        </div>
+      </div></div>
+      <div class="crit-hit-box"><label>Critique à la touche</label><select onchange="setWeaponSelect('${w.id}','critHit',Number(this.value))">${[2,3,4,5,6].map(x=>`<option value="${x}" ${Number(w.critHit||6)===x?'selected':''}>${x}+</option>`).join('')}</select></div>
+      <div class="crit-wound-box"><label>Critique à la blessure</label><select onchange="setWeaponSelect('${w.id}','critWound',Number(this.value))">${[2,3,4,5,6].map(x=>`<option value="${x}" ${Number(w.critWound||6)===x?'selected':''}>${x}+</option>`).join('')}</select></div>
+      <div class="critical-note-box"><label>Seuils critiques</label><div class="note critical-threshold-note" style="padding:8px 0">Résultat naturel du D6 : 5+ signifie 5-6 critiques, 3+ signifie 3-6 critiques. <strong>Permet également de représenter la capacité Anti-X pour le jet de blessure.</strong></div></div>
+    </div>
+
+    <div class="weapon-grid blast-cleave-plain" style="margin-top:7px">
+      ${$('attackPhase').value==='ranged'?`
+        <div><label>Blast X</label><input type="number" min="0" max="20" value="${w.blast}" oninput="setWeapon('${w.id}','blast',this.value)"></div>
+        <div><label>Effectif utilisé pour Blast</label><div class="blast-target-display"><b>${targetModelCount()} figurine(s)</b></div></div>
+      `:`
+        <div><label>Cleave X</label><input type="number" min="0" max="20" value="${w.cleave}" oninput="setWeapon('${w.id}','cleave',this.value)"></div>
+        <div><label>Effectif utilisé pour Cleave</label><div class="blast-target-display"><b>${targetModelCount()} figurine(s)</b></div></div>
+      `}
+      <div><label>Modificateurs défensifs</label><div class="note" style="padding:8px 0">−1 Touche et −1 Blessure sont réglés dans la section <b>défense de la cible</b>.</div></div>
+
+    </div>
+
+    <div class="note" style="margin-top:7px">
+      Blast/Cleave utilisent automatiquement l’effectif indiqué dans la section <b>Cible</b>. Dès que Blast X ou Cleave X vaut <b>1 ou plus</b>, le bonus s’applique automatiquement : <b>Nombre d’armes × X × nombre de tranches complètes de 5 figurines ciblées</b>. À <b>0</b>, la règle est inactive. Le nombre d’armes et le nombre d’attaques restent indépendants. Exemple : 3 armes, 12 attaques totales, Blast 2, cible de 10 figurines = 12 + (3 × 2 × 2) = 24 attaques.
+    </div>
+  </div>`;
+}
+
+function rrOptions(v){return [['none','Aucune'],['ones','Relance des 1'],['failed','Relance des échecs']].map(x=>`<option value="${x[0]}" ${v===x[0]?'selected':''}>${x[1]}</option>`).join('');}
+
+function targetModelCount(){
+  if(target==='single')return 1;
+  if(target==='oneW')return Math.max(1,whole('oneWCount'));
+  if(target==='multiW')return Math.max(1,whole('multiWCount'));
+  if(target==='attached')return Math.max(1,whole('bodyCount'))+1;
+  return 1;
+}
+
+function setTarget(t){
+  target=t;
+  ['single','oneW','multiW','attached'].forEach(x=>{
+    const cap=x.charAt(0).toUpperCase()+x.slice(1);
+    $('target'+cap).classList.toggle('on',x===t);
+    const field=x==='single'?'singleFields':x==='oneW'?'oneWFields':x==='multiW'?'multiWFields':'attachedFields';
+    $(field).classList.toggle('hidden',x!==t);
+  });
+  renderWeapons();
+  calculate();
+}
+
+function woundThreshold(S,T){
+  if(S>=2*T)return 2;
+  if(S>T)return 3;
+  if(S===T)return 4;
+  if(S*2<=T)return 6;
+  return 5;
+}
+
+function dieOutcome(d,threshold,modifier,critAllowed=true,critThreshold=6){
+  threshold=Number(threshold);
+  critThreshold=Math.max(2,Math.min(6,Number(critThreshold)||6));
+  modifier=Math.max(-6,Math.min(6,Number(modifier)||0));
+  if(d===1)return 'fail';
+  if(critAllowed && d>=critThreshold)return 'crit';
+  const modified=d+modifier;
+  return modified>=threshold?'success':'fail';
+}
+
+function rollDist(threshold,modifier,reroll,critAllowed=true,critThreshold=6){
+  threshold=Number(threshold);
+  modifier=Math.max(-6,Math.min(6,Number(modifier)||0));
+  const out={fail:0,success:0,crit:0};
+  for(let d=1;d<=6;d++){
+    const first=dieOutcome(d,threshold,modifier,critAllowed,critThreshold);
+    const again=reroll==='ones'?d===1:reroll==='failed'?first==='fail':false;
+    if(!again)out[first]+=1/6;
+    else for(let d2=1;d2<=6;d2++)out[dieOutcome(d2,threshold,modifier,critAllowed,critThreshold)]+=1/36;
+  }
+  return out;
+}
+
+function saveFail(armor,ap,inv){
+  const n=armor+ap;
+  const effective=inv>0?Math.min(n,inv):n;
+  if(effective<=1)return 0;
+  if(effective>=7)return 1;
+  return (effective-1)/6;
+}
+
+function fnpPass(fnp){return fnp>0?(7-fnp)/6:1;}
+
+function choose(n,k){
+  if(k<0||k>n)return 0;
+  k=Math.min(k,n-k);
+  let r=1;for(let i=1;i<=k;i++)r*=((n-i+1)/i);return r;
+}
+
+function damageAfterFnp(D,pass){
+  if(pass>=1-1e-12){
+    const a=new Array(D+1).fill(0);a[D]=1;return a;
+  }
+  const p=1-pass,a=new Array(D+1).fill(0);
+  for(let k=0;k<=D;k++)a[k]=choose(D,k)*Math.pow(p,k)*Math.pow(pass,D-k);
+  return normalize(a);
+}
+
+function normalWoundDist(D,sFail,fpass){
+  const after=damageAfterFnp(D,fpass),o=new Array(D+1).fill(0);
+  for(let k=0;k<=D;k++)o[k]+=sFail*after[k];
+  o[0]+=1-sFail;return normalize(o);
+}
+function devDist(D,fpass){return damageAfterFnp(D,fpass);}
+function normalize(a){const s=a.reduce((x,y)=>x+y,0);return s>0?a.map(v=>v/s):a.slice();}
+
+function convolve(a,b,cap){
+  const o=new Array(cap+1).fill(0);
+  for(let i=0;i<a.length;i++)for(let j=0;j<b.length;j++)if(a[i]&&b[j])o[Math.min(cap,i+j)]+=a[i]*b[j];
+  return normalize(o);
+}
+
+/*
+  Creates a distribution for ONE hit after the wound/save/FNP chain.
+*/
+function hitDamageDistribution(S,T,armor,inv,fnp,AP,damage,woundRR,woundMod,devastating,critWound=6){
+  const w=rollDist(woundThreshold(S,T),woundMod,woundRR,true,critWound);
+  const sf=saveFail(armor,AP,inv),fp=fnpPass(fnp);
+  const normal=normalWoundDist(damage,sf,fp),dev=devDist(damage,fp);
+  const out=new Array(Math.max(normal.length,dev.length)).fill(0);
+  for(let d=0;d<normal.length;d++)out[d]+=w.success*normal[d];
+  for(let d=0;d<(devastating?dev:normal).length;d++)out[d]+=(devastating?dev[d]:normal[d])*w.crit;
+  out[0]+=w.fail;
+  return normalize(out);
+}
+
+/*
+  Resolve one ORIGINAL attack of a weapon, preserving its Critical Hit branch.
+*/
+function resolveOriginalAttack(w,targetDef,mode){
+  const hit=mode.torrent
+    ? {fail:0,success:1,crit:0}
+    : mode.overwatch
+      ? {fail:5/6,success:1/6,crit:0}
+      : rollDist(w.hit,mode.hitModifier||0,mode.hitRR,true,w.critHit||6);
+
+  const damageDist=hitDamageDistribution(
+    w.strength,targetDef.T,targetDef.armor,targetDef.inv,targetDef.fnp,w.ap,
+    mode.damage,w.woundRR,mode.woundModifier||0,w.devastating,w.critWound||6
+  );
+
+  // Lethal Hits option: on a Critical Hit, auto-wound without making a wound roll.
+  const lethalAuto=normalWoundDist(
+    mode.damage,saveFail(targetDef.armor,w.ap,targetDef.inv),fnpPass(targetDef.fnp)
+  );
+  const criticalBase=(mode.lethal&&mode.lethalChoice==='auto')?lethalAuto:damageDist;
+
+  // Build result of original attack. A critical can add X normal hits.
+  let critBranch=criticalBase.slice();
+  for(let i=0;i<mode.sustained;i++){
+    critBranch=convolve(critBranch,damageDist,critBranch.length+damageDist.length-1);
+  }
+
+  const cap=Math.max(damageDist.length,critBranch.length);
+  const out=new Array(cap).fill(0);
+  for(let i=0;i<damageDist.length;i++)out[i]+=hit.success*damageDist[i];
+  for(let i=0;i<critBranch.length;i++)out[i]+=hit.crit*critBranch[i];
+  out[0]+=hit.fail;
+  return normalize(out);
+}
+
+/*
+  Generate a weapon mode after global modifiers and Blast/Cleave bonuses.
+  Bonus attacks are determined from the target unit's model count at selection.
+*/
+function effectiveWeapon(w){
+  const baseDamage=Math.max(1,Math.floor(w.damage));
+  /* Une aptitude qui fixe les dégâts à 1 prend le pas sur la réduction de −1 dégât. */
+  const damage=$('phaseDamageOne').checked
+    ? 1
+    : ($('minusDamage').checked ? Math.max(1,baseDamage-1) : baseDamage);
+
+  const isOverwatch=w.overwatch || $('globalOverwatch').checked;
+  const torrent=w.torrent;
+
+  let A=Math.max(0,Math.floor(w.attacks));
+  // V12: Blast/Cleave read the target's actual selected model count directly.
+  const models=targetModelCount();
+  const fives=Math.floor(Math.max(0,models)/5);
+
+  let blastBonus=0,cleaveBonus=0;
+  const baseAttacks=Math.max(0,Math.floor(w.attacks));
+  const weaponCount=Math.max(1,Math.floor(w.weaponCount||1));
+  // V15: Blast/Cleave scale with NUMBER OF WEAPONS, not number of attacks.
+  // The player enters weapon count and total base attacks independently.
+  // Example: 3 weapons, 12 total attacks, Blast 2, target 10 models:
+  // +3 × 2 × 2 = +12 attacks => 24 total attacks.
+  if(w.blast>0)blastBonus=weaponCount*w.blast*fives;
+  if(w.cleave>0)cleaveBonus=weaponCount*w.cleave*fives;
+  A=baseAttacks+blastBonus+cleaveBonus;
+
+  const hitModifier=
+    ($('targetMinusHit').checked ? -1 : 0) +
+    (($('attackPhase').value==='ranged' && $('targetCover').checked) ? -1 : 0);
+  const woundBonus=w.plusOneWound?1:0;
+  const woundPenalty=$('minusWound').checked ? -1 : 0;
+  const woundModifier=Math.max(-1,Math.min(1,woundBonus+woundPenalty));
+
+  return {
+    ...w, attacks:A,damage,
+    hitModifier,woundModifier,
+    minusHit:hitModifier<0,minusWound:woundModifier<0,
+    sustained:Math.max(0,Math.floor(w.sustained)),
+    lethal:w.lethal,devastating:w.devastating,
+    lethalChoice:w.lethalChoice||'auto',
+    overwatch:isOverwatch,torrent,
+    blastBonus,cleaveBonus
+  };
+}
+
+/*
+  Resolve an entire list of weapon profiles against a target state.
+  state key = destroyedModels*H + damageOnCurrentModel.
+  "cancelOne" state is tracked separately by using key object.
+*/
+function resolveProfileList(profiles,targetDef,targetInfo,allowPrecision=false){
+  let stateMap=new Map();
+  stateMap.set('0|0',1);
+
+  let cancelled=false;
+  // For each profile, all of its attacks are resolved before next profile.
+  for(const w0 of profiles){
+    const w=effectiveWeapon(w0);
+    for(let a=0;a<w.attacks;a++){
+      stateMap=applyAttackToStates(stateMap,w,targetDef,targetInfo,cancelled);
+      // applyAttackToStates stores cancellation usage in state key itself.
+    }
+  }
+  return stateMap;
+}
+
+function parseState(key){
+  const p=key.split('|').map(Number);
+  return {state:p[0],used:p[1]===1};
+}
+function makeKey(state,used){return state+'|'+(used?1:0);}
+
+function applyAttackToStates(states,w,targetDef,targetInfo,cancelledArg){
+  const cap=targetInfo.totalWounds;
+  const out=new Map();
+  const attackDist=resolveOriginalAttack(w,targetDef,w);
+
+  for(const [key,prob] of states.entries()){
+    const {state,used}=parseState(key);
+    const H=targetInfo.modelHP,N=targetInfo.modelCount;
+    const destroyed=Math.floor(state/H);
+    const current=state%H;
+
+    for(let d=0;d<attackDist.length;d++){
+      let pd=attackDist[d];if(!pd)continue;
+      if(destroyed>=N){add(out,makeKey(cap,used),prob*pd);continue;}
+
+      // Single-use defensive effect: one failed save from an attack with the
+      // selected Damage characteristic is reduced to 0 damage.
+      const cancelDamage=Math.max(1,Math.floor(num('zeroAttackDamage')));
+      if(!used && $('zeroOneAttack').checked && w.damage===cancelDamage && d>0){
+        add(out,makeKey(state,true),prob*pd);
+        continue;
+      }
+
+      if(d===0){add(out,makeKey(state,used),prob*pd);continue;}
+
+      if(targetInfo.oneW){
+        add(out,makeKey(Math.min(N,destroyed+1)*H,used),prob*pd);
+      }else{
+        const nd=current+d;
+        if(nd>=H)add(out,makeKey(Math.min(N,destroyed+1)*H,used),prob*pd);
+        else add(out,makeKey(destroyed*H+nd,used),prob*pd);
+      }
+    }
+  }
+  return normalizeMap(out);
+}
+
+function add(m,k,v){m.set(k,(m.get(k)||0)+v);}
+function normalizeMap(m){
+  let s=0;for(const v of m.values())s+=v;if(!s)return m;
+  const o=new Map();for(const [k,v] of m.entries())o.set(k,v/s);return o;
+}
+
+function targetDefinition(){
+  const T=Math.max(1,whole('tough'));
+  const armor=Number($('save').value);
+  const inv=Number($('inv').value);
+  const fnp=Number($('fnp').value);
+
+  if(target==='single'){
+    const hp=Math.max(1,whole('singleHP'));
+    return {T,armor,inv,fnp,modelHP:hp,modelCount:1,totalWounds:hp,oneW:false,description:`Figurine seule • ${hp} PV`};
+  }
+  if(target==='oneW'){
+    const c=Math.max(1,whole('oneWCount'));
+    return {T,armor,inv,fnp,modelHP:1,modelCount:c,totalWounds:c,oneW:true,description:`Unité • ${c} figurines à 1 PV`};
+  }
+  if(target==='multiW'){
+    const h=Math.max(2,whole('multiWHP')),c=Math.max(1,whole('multiWCount'));
+    return {T,armor,inv,fnp,modelHP:h,modelCount:c,totalWounds:h*c,oneW:false,description:`Unité • ${c} figurines à ${h} PV`};
+  }
+  const c=Math.max(1,whole('bodyCount')),h=Math.max(1,whole('bodyHP'));
+  return {T,armor,inv,fnp,modelHP:h,modelCount:c,totalWounds:h*c,oneW:h===1,description:`Unité attachée • ${c} gardes à ${h} PV`};
+}
+
+function calculate(){
+  try{
+    if(!weapons.length){
+      $('result').innerHTML='<div class="kicker">AJOUTE AU MOINS UNE ARME</div><div style="margin-top:8px">Utilise « Ajouter une arme » pour commencer.</div>';
+      $('details').innerHTML='';return;
+    }
+
+    const def=targetDefinition();
+    let unitProfiles=weapons.filter(w=>w.kind==='unit');
+    let charProfiles=weapons.filter(w=>w.kind==='character');
+    const phase=$('attackPhase').value;
+
+    // All listed unit profiles are combined. Character profiles are also included.
+    // In melee, profiles marked Extra Attacks are explicitly allowed alongside the
+    // character's other selected melee weapon profile(s).
+    let mainProfiles=[...unitProfiles,...charProfiles];
+    if(!mainProfiles.length)mainProfiles=weapons.slice();
+
+    const mainStates=resolveProfileList(mainProfiles,def,def);
+    const fullKey=makeKey(def.totalWounds,false);
+    const fullKeyUsed=makeKey(def.totalWounds,true);
+    const destroy=(mainStates.get(fullKey)||0)+(mainStates.get(fullKeyUsed)||0);
+
+    let expected=0;
+    for(const [k,p] of mainStates.entries())expected+=parseState(k).state*p;
+    const avg=Math.min(def.totalWounds,expected);
+
+    let charHTML='';
+    if(target==='attached' && $('precision').checked){
+      const cHP=Math.max(1,whole('charHP'));
+      const cSave=Number($('charSave').value),cInv=Number($('charInv').value),cFnp=Number($('charFnp').value);
+      const precisionProfiles=mainProfiles.filter(w=>w.precision);
+      if(precisionProfiles.length){
+        const cDef={...def,T:def.T,armor:cSave,inv:cInv,fnp:cFnp,modelHP:cHP,modelCount:1,totalWounds:cHP,oneW:false};
+        const charStates=resolveProfileList(precisionProfiles,cDef,cDef,true);
+        const cKill=(charStates.get(makeKey(cHP,false))||0)+(charStates.get(makeKey(cHP,true))||0);
+        let cExp=0;for(const [k,p] of charStates.entries())cExp+=parseState(k).state*p;
+        charHTML=`<div class="profile-card"><div class="kicker">🎯 PRÉCISION — PERSONNAGE</div>
+        <div class="big" style="font-size:36px">${(cKill*100).toFixed(1)}%</div>
+        <div class="small">probabilité de tuer le personnage • ${cExp.toFixed(2)} PV moyens infligés par les profils Précision</div></div>`;
+      } else {
+        charHTML=`<div class="profile-card"><div class="kicker">🎯 PRÉCISION</div><div class="note">Aucun profil d’arme n’a la règle Précision activée.</div></div>`;
+      }
+    }
+
+    const pct=Math.min(100,avg/def.totalWounds*100);
+    $('result').innerHTML=`
+      <div class="kicker">${target==='attached'&&$('precision').checked?'PROBABILITÉ PRINCIPALE — GARDE DU CORPS':'PROBABILITÉ DE DÉTRUIRE LA CIBLE'}</div>
+      <div class="big">${(destroy*100).toFixed(1)}%</div>
+      <div class="stats">
+        <div class="stat"><div class="num">${avg.toFixed(2)}</div><div class="small">PV moyens retirés</div></div>
+        <div class="stat"><div class="num">${pct.toFixed(1)}%</div><div class="small">de la cible en moyenne</div></div>
+        <div class="stat"><div class="num">${weapons.length}</div><div class="small">profils d'armes</div></div>
+        <div class="stat"><div class="num">${def.totalWounds}</div><div class="small">PV totaux de la cible principale</div></div>
+      </div>
+      ${charHTML}
+    `;
+
+    let weaponRows='';
+    for(const w0 of weapons){
+      const w=effectiveWeapon(w0);
+      const extra=(w.blastBonus||w.cleaveBonus)?` • +${(w.blastBonus||0)+(w.cleaveBonus||0)} attaques`:'';
+      weaponRows+=`<div class="row"><span>${esc(w.name)} • ${Math.max(1,Math.floor(w.weaponCount||1))} arme(s)</span><b>${w.attacks} A${extra}</b></div>`;
+    }
+
+    const sf=saveFail(def.armor,Math.max(0,wholeFromWeaponAP(weapons)),def.inv);
+    $('details').innerHTML=`
+      <div class="row"><span>Cible</span><b>${def.description}</b></div>
+      <div class="row"><span>Profils</span><b>${weapons.length} (${unitProfiles.length} unité${charProfiles.length?' + '+charProfiles.length+' personnage(s)':''})</b></div>
+      ${weaponRows}
+      <div class="row"><span>Défense : −1 touche</span><b>${$('targetMinusHit').checked?'Actif':'Inactif'}</b></div>
+      ${phase==='ranged'?`<div class="row"><span>Couvert : −1 touche supplémentaire</span><b>${$('targetCover').checked?'Actif':'Inactif'}</b></div>`:''}
+      <div class="row"><span>Modificateur total à la touche</span><b>${effectiveWeapon(weapons[0]).hitModifier}</b></div>
+      <div class="row"><span>Défense : −1 blessure</span><b>${$('minusWound').checked?'Actif':'Inactif'}</b></div>
+      <div class="row"><span>Règle −1 dégâts</span><b>${$('minusDamage').checked?'Active — minimum 1':'Inactive'}</b></div>
+      <div class="row"><span>Dégâts ramenés à 1 pour la phase</span><b>${$('phaseDamageOne').checked?'Actif':'Inactif'}</b></div>
+      <div class="row"><span>Sauvegarde ratée ramenée à 0 dégât</span><b>${$('zeroOneAttack').checked?`1 attaque de D${Math.max(1,Math.floor(num('zeroAttackDamage')))} annulée`:'Inactive'}</b></div>
+      ${target==='attached'&&$('precision').checked?'<div class="note" style="margin-top:8px"><b>Précision :</b> les profils du personnage sont calculés séparément contre ses propres sauvegardes/FNP lorsqu’ils sont utilisés pour cibler le personnage.</div>':''}
+      <div class="note" style="margin-top:9px">Blast/Cleave lisent directement l’effectif sélectionné dans la section Cible : bonus = Nombre d’armes × X × ⌊figurines ciblées / 5⌋. Le nombre d’attaques de base reste indépendant.</div>
+    `;
+  }catch(e){
+    $('result').innerHTML=`<div class="kicker">ERREUR</div><div class="note" style="margin-top:7px;color:#ffd0d0">${esc(e&&e.message?e.message:String(e))}</div>`;
+    $('details').innerHTML='';console.error(e);
+  }
+}
+
+function wholeFromWeaponAP(list){
+  // Used only for display; main calculations use each weapon AP individually.
+  return list.length?Math.max(...list.map(w=>Math.max(0,Math.floor(w.ap)))):0;
+}
+
+function profileData(){
+  return {
+    weapons,
+    target,
+    fields:{
+      tough:$('tough').value,save:$('save').value,inv:$('inv').value,fnp:$('fnp').value,
+      targetMinusHit:$('targetMinusHit').checked,targetCover:$('targetCover').checked,minusWound:$('minusWound').checked,minusDamage:$('minusDamage').checked,phaseDamageOne:$('phaseDamageOne').checked,zeroOneAttack:$('zeroOneAttack').checked,zeroAttackDamage:$('zeroAttackDamage').value,
+      globalOverwatch:$('globalOverwatch').checked,attackPhase:$('attackPhase').value,theme:document.body.dataset.theme,
+      singleHP:$('singleHP').value,oneWCount:$('oneWCount').value,multiWHP:$('multiWHP').value,multiWCount:$('multiWCount').value,
+      bodyCount:$('bodyCount').value,bodyHP:$('bodyHP').value,precision:$('precision').checked,
+      charHP:$('charHP').value,charSave:$('charSave').value,charInv:$('charInv').value,charFnp:$('charFnp').value
+    }
+  };
+}
+
+function saveProfile(){
+  const name=prompt('Nom du profil');
+  if(!name)return;
+  const data=profileStore();data[name]=profileData();
+  saveStore(data);refreshProfiles();$('profiles').value=name;
+}
+
+function profileStore(){try{return JSON.parse(localStorage.getItem('40kProfilesV40')||'{}')}catch(e){return {}}}
+function saveStore(d){try{localStorage.setItem('40kProfilesV40',JSON.stringify(d));return true}catch(e){return false}}
+
+function refreshProfiles(){
+  const data=profileStore();
+  $('profiles').innerHTML=Object.keys(data).sort().map(k=>`<option>${esc(k)}</option>`).join('');
+}
+
+function loadProfile(){
+  const name=$('profiles').value;if(!name)return;
+  const p=profileStore()[name];if(!p)return;
+  weapons=Array.isArray(p.weapons)?p.weapons:[];
+  nextWeaponId=1;
+  weapons.forEach(w=>{if(w.id){const m=String(w.id).match(/(\d+)$/);if(m)nextWeaponId=Math.max(nextWeaponId,Number(m[1])+1)}});
+  target=p.target||'single';
+  const f=p.fields||{};
+  for(const id of ['tough','save','inv','fnp','singleHP','oneWCount','multiWHP','multiWCount','bodyCount','bodyHP','charHP','charSave','charInv','charFnp'])if(f[id]!==undefined)$(id).value=f[id];
+  $('targetMinusHit').checked=!!f.targetMinusHit;$('targetCover').checked=!!f.targetCover;$('minusWound').checked=!!f.minusWound;$('minusDamage').checked=!!f.minusDamage;$('phaseDamageOne').checked=!!f.phaseDamageOne;$('zeroOneAttack').checked=!!f.zeroOneAttack;$('zeroAttackDamage').value=f.zeroAttackDamage!==undefined?f.zeroAttackDamage:1;
+  $('globalOverwatch').checked=!!f.globalOverwatch;$('precision').checked=!!f.precision;
+  $('attackPhase').value=f.attackPhase||'ranged';setTheme(f.theme||'imperium');
+  onAttackPhaseChange();setTarget(target);calculate();
+}
+
+function deleteProfile(){
+  const name=$('profiles').value;if(!name)return;
+  const data=profileStore();delete data[name];saveStore(data);refreshProfiles();
+}
+
+function resetAll(){
+  $('tough').value=4;$('save').value=4;$('inv').value=4;$('fnp').value=5;
+  $('targetMinusHit').checked=false;$('targetCover').checked=false;$('minusWound').checked=false;$('minusDamage').checked=false;$('phaseDamageOne').checked=false;$('zeroOneAttack').checked=false;$('zeroAttackDamage').value=1;
+  $('globalOverwatch').checked=false;$('attackPhase').value='ranged';setTheme('imperium');
+  $('singleHP').value=10;$('oneWCount').value=10;$('multiWHP').value=2;$('multiWCount').value=5;
+  $('bodyCount').value=4;$('bodyHP').value=2;$('precision').checked=false;
+  $('charHP').value=5;$('charSave').value=3;$('charInv').value=3;$('charFnp').value=5;
+  target='single';weapons=[defaultWeapon('unit')];renderWeapons();setTarget('single');calculate();
+}
+
+function init(){
+  try{setTheme(localStorage.getItem('40kThemeV14')||'imperium')}catch(e){setTheme('imperium')}
+  weapons=[defaultWeapon('unit')];
+  renderWeapons();
+  setTarget('single');
+  refreshProfiles();
+  calculate();
+}
+init();
+</script>
+</body>
+</html>
